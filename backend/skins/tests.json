@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "name": "Get all skins",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "0": {
+          "id": "number",
+          "name": "string",
+          "weapon": "string",
+          "rarity": "string",
+          "price": "number"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Filter skins by rarity",
+      "method": "GET",
+      "path": "/?rarity=Covert",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "0": {
+          "rarity": "Covert"
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

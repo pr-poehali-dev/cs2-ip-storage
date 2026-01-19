@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,9 +171,59 @@ const Index = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [selectedServer, setSelectedServer] = useState<Server | null>(null);
-  const [skins] = useState<Skin[]>(mockSkins);
+  const [skins, setSkins] = useState<Skin[]>(mockSkins);
   const [skinSearch, setSkinSearch] = useState('');
   const [selectedSkin, setSelectedSkin] = useState<Skin | null>(null);
+  const [rarityFilter, setRarityFilter] = useState<string>('all');
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000000]);
+  const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
+  const [currentUser] = useState('Player1');
+
+  useEffect(() => {
+    fetchSkins();
+  }, [rarityFilter, priceRange]);
+
+  const fetchSkins = async () => {
+    try {
+      let url = 'https://functions.poehali.dev/fac2ceb6-fa03-4b04-a80b-0d59fb96034f';
+      const params = new URLSearchParams();
+      
+      if (rarityFilter !== 'all') {
+        params.append('rarity', rarityFilter);
+      }
+      
+      if (priceRange[0] > 0) {
+        params.append('min_price', priceRange[0].toString());
+      }
+      
+      if (priceRange[1] < 2000000) {
+        params.append('max_price', priceRange[1].toString());
+      }
+      
+      if (params.toString()) {
+        url += '?' + params.toString();
+      }
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      const formattedSkins = data.map((skin: any) => ({
+        id: skin.id.toString(),
+        name: skin.name,
+        weapon: skin.weapon,
+        rarity: skin.rarity,
+        wear: skin.wear,
+        price: skin.price,
+        image: skin.image_url,
+        float: skin.float_value,
+        stickers: skin.stickers
+      }));
+      
+      setSkins(formattedSkins);
+    } catch (error) {
+      console.error('Failed to fetch skins:', error);
+    }
+  };
 
   const filteredServers = servers.filter(server => {
     const matchesSearch = 
@@ -205,6 +255,12 @@ const Index = () => {
               <a href="#top" className="text-foreground hover:text-primary transition-colors">Топ рейтинг</a>
               <a href="#skins" className="text-foreground hover:text-primary transition-colors">Скины</a>
               <a href="#contacts" className="text-foreground hover:text-primary transition-colors">Контакты</a>
+              <a href="/admin">
+                <Button variant="outline" size="sm">
+                  <Icon name="Shield" size={16} className="mr-2" />
+                  Админ
+                </Button>
+              </a>
             </nav>
           </div>
         </div>
@@ -372,14 +428,61 @@ const Index = () => {
             </Badge>
           </div>
 
-          <div className="relative">
-            <Icon name="Search" size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Поиск по названию оружия..."
-              value={skinSearch}
-              onChange={(e) => setSkinSearch(e.target.value)}
-              className="pl-10"
-            />
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Icon name="Search" size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Поиск по названию оружия..."
+                  value={skinSearch}
+                  onChange={(e) => setSkinSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <Select value={rarityFilter} onValueChange={setRarityFilter}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Редкость" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Все редкости</SelectItem>
+                  <SelectItem value="Consumer">Consumer</SelectItem>
+                  <SelectItem value="Industrial">Industrial</SelectItem>
+                  <SelectItem value="Mil-Spec">Mil-Spec</SelectItem>
+                  <SelectItem value="Restricted">Restricted</SelectItem>
+                  <SelectItem value="Classified">Classified</SelectItem>
+                  <SelectItem value="Covert">Covert</SelectItem>
+                  <SelectItem value="Contraband">Contraband</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex flex-col md:flex-row gap-4 items-center">
+              <div className="flex-1 w-full">
+                <Label className="text-sm mb-2 block">Ценовой диапазон: ₽{priceRange[0].toLocaleString()} - ₽{priceRange[1].toLocaleString()}</Label>
+                <div className="flex gap-4 items-center">
+                  <Input
+                    type="number"
+                    placeholder="Мин"
+                    value={priceRange[0]}
+                    onChange={(e) => setPriceRange([Number(e.target.value), priceRange[1]])}
+                    className="w-32"
+                  />
+                  <span className="text-muted-foreground">—</span>
+                  <Input
+                    type="number"
+                    placeholder="Макс"
+                    value={priceRange[1]}
+                    onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                    className="w-32"
+                  />
+                  <Button variant="outline" size="sm" onClick={fetchSkins}>
+                    <Icon name="Filter" size={16} className="mr-2" />
+                    Применить
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -517,14 +620,27 @@ const Index = () => {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Цена</p>
-                    <p className="text-3xl font-bold text-primary">₽{selectedSkin.price.toLocaleString()}</p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Цена</p>
+                      <p className="text-3xl font-bold text-primary">₽{selectedSkin.price.toLocaleString()}</p>
+                    </div>
+                    <Button size="lg" className="gap-2">
+                      <Icon name="ShoppingCart" size={20} />
+                      Купить скин
+                    </Button>
                   </div>
-                  <Button size="lg" className="gap-2">
-                    <Icon name="ShoppingCart" size={20} />
-                    Купить скин
+                  <Button 
+                    variant="outline" 
+                    size="lg" 
+                    className="w-full gap-2"
+                    onClick={() => {
+                      setTradeDialogOpen(true);
+                    }}
+                  >
+                    <Icon name="ArrowLeftRight" size={20} />
+                    Предложить обмен
                   </Button>
                 </div>
               </div>
@@ -599,6 +715,61 @@ const Index = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={tradeDialogOpen} onOpenChange={setTradeDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Предложить обмен</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Вы предлагаете</Label>
+              {selectedSkin && (
+                <Card>
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <img src={selectedSkin.image} alt={selectedSkin.name} className="w-16 h-16 object-contain" />
+                    <div>
+                      <p className="font-semibold">{selectedSkin.name}</p>
+                      <p className="text-sm text-muted-foreground">₽{selectedSkin.price.toLocaleString()}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Выберите скин для обмена</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите скин из вашего инвентаря" />
+                </SelectTrigger>
+                <SelectContent>
+                  {skins.filter(s => s.id !== selectedSkin?.id).slice(0, 5).map(skin => (
+                    <SelectItem key={skin.id} value={skin.id}>
+                      {skin.name} - ₽{skin.price.toLocaleString()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Имя получателя</Label>
+              <Input placeholder="Введите никнейм игрока" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Сообщение (необязательно)</Label>
+              <Textarea placeholder="Добавьте комментарий к предложению..." rows={3} />
+            </div>
+
+            <Button className="w-full" size="lg">
+              <Icon name="Send" size={18} className="mr-2" />
+              Отправить предложение
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -1,0 +1,30 @@
+{
+  "tests": [
+    {
+      "name": "Get pending trades",
+      "method": "GET",
+      "path": "/?status=pending",
+      "expectedStatus": 200,
+      "expectedBody": [],
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create trade offer",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "from_user": "TestUser1",
+        "to_user": "TestUser2",
+        "offered_skin_id": 1,
+        "requested_skin_id": 2,
+        "message": "Fair trade"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "id": "number",
+        "message": "Trade offer created"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
